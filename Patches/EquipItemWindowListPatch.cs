@@ -13,31 +13,32 @@ namespace DrakiaXYZ.EquipFromWeaponRack.Patches
 {
     internal class EquipItemWindowListPatch : ModulePatch
     {
-        private static Type _inventoryControllerType;
+        protected static Type _targetClass;
+        protected static Type _inventoryControllerType;
 
-        private static FieldInfo _inventoryControllerClassField;
-        private static FieldInfo _itemAddressField;
+        protected static FieldInfo _inventoryControllerClassField;
+        protected static FieldInfo _itemAddressField;
 
-        private static PropertyInfo _inventoryProperty;
+        protected static PropertyInfo _inventoryProperty;
 
-        private static MethodInfo _getNotMergedItemsMethod;
-        private static MethodInfo _canAcceptMethod;
+        protected static MethodInfo _getNotMergedItemsMethod;
+        protected static MethodInfo _canAcceptMethod;
 
         protected override MethodBase GetTargetMethod()
         {
-            var targetClass = PatchConstants.EftTypes.Single(IsTargetClass);
+            _targetClass = PatchConstants.EftTypes.Single(IsTargetClass);
 
-            _inventoryControllerClassField = AccessTools.GetDeclaredFields(targetClass).Single(x => x.FieldType.Name == "InventoryControllerClass");
+            _inventoryControllerClassField = AccessTools.GetDeclaredFields(_targetClass).Single(x => x.FieldType.Name == "InventoryControllerClass");
             _inventoryControllerType = _inventoryControllerClassField.FieldType;
             _inventoryProperty = AccessTools.Property(_inventoryControllerType, "Inventory");
-            _itemAddressField = AccessTools.GetDeclaredFields(targetClass).Single(x => typeof(ItemAddress).IsAssignableFrom(x.FieldType));
+            _itemAddressField = AccessTools.GetDeclaredFields(_targetClass).Single(x => typeof(ItemAddress).IsAssignableFrom(x.FieldType));
 
             _getNotMergedItemsMethod = AccessTools.Method(PatchConstants.EftTypes.Single(x => AccessTools.GetMethodNames(x).Contains("GetNotMergedItems")), "GetNotMergedItems");
 
             Type canAcceptClass = PatchConstants.EftTypes.Single(IsCanAcceptClass);
             _canAcceptMethod = AccessTools.Method(canAcceptClass, "CanAccept");
 
-            return AccessTools.GetDeclaredMethods(targetClass).Single(x => x.ReturnType.Equals(typeof(IEnumerable<Item>)));
+            return AccessTools.GetDeclaredMethods(_targetClass).Single(x => x.ReturnType.Equals(typeof(IEnumerable<Item>)));
         }
 
         private bool IsTargetClass(Type type)
@@ -61,6 +62,7 @@ namespace DrakiaXYZ.EquipFromWeaponRack.Patches
             var inventory = _inventoryProperty.GetValue(inventoryControllerClass) as Inventory;
             foreach (var area in new EAreaType[] { EAreaType.WeaponStand, EAreaType.WeaponStandSecondary })
             {
+                if (!inventory.HideoutAreaStashes.ContainsKey(area)) continue;
                 var areaStash = inventory.HideoutAreaStashes[area];
                 var areaItems = _getNotMergedItemsMethod.Invoke(null, new object[] { areaStash }) as IEnumerable<Item>;
                 __result = __result.Concat(areaItems);
