@@ -30,7 +30,12 @@ namespace DrakiaXYZ.EquipFromWeaponRack.Patches
             Type isChildOfClass = PatchConstants.EftTypes.Single(x => x.GetMethod("ParentRecursiveCheck") != null);
             _isChildOfMethod = AccessTools.Method(isChildOfClass, "IsChildOf", new Type[] { typeof(Item), typeof(Item) });
 
-            return AccessTools.Method(_targetClass, "method_5");
+            // Find the third method_* method that takes no parameters, and returns void
+            return AccessTools.GetDeclaredMethods(_targetClass).Where(x => 
+                x.GetParameters().Length == 0 && 
+                x.ReturnType == typeof(void) &&
+                x.Name.StartsWith("method_")
+            ).ElementAt(2);
         }
 
         [PatchPostfix]
