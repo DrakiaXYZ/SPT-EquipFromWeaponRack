@@ -28,7 +28,7 @@ namespace DrakiaXYZ.EquipFromWeaponRack.Patches
         {
             _targetClass = PatchConstants.EftTypes.Single(IsTargetClass);
 
-            _inventoryControllerClassField = AccessTools.GetDeclaredFields(_targetClass).Single(x => x.FieldType.Name == "InventoryControllerClass");
+            _inventoryControllerClassField = AccessTools.GetDeclaredFields(_targetClass).Single(x => x.FieldType.Name == nameof(InventoryController));
             _inventoryControllerType = _inventoryControllerClassField.FieldType;
             _inventoryProperty = AccessTools.Property(_inventoryControllerType, "Inventory");
             _itemAddressField = AccessTools.GetDeclaredFields(_targetClass).Single(x => typeof(ItemAddress).IsAssignableFrom(x.FieldType));
@@ -69,10 +69,8 @@ namespace DrakiaXYZ.EquipFromWeaponRack.Patches
             }
 
             __result = __result
-                .Where(item => itemAddress.Item != item)
-                .Where(item => {
-                    return (bool)_canAcceptMethod.Invoke(null, new object[] { itemAddress.Container, item });
-                })
+                .Where(item => itemAddress != item.CurrentAddress)
+                .Where(item => itemAddress.Container.CanAccept(item))
                 .Where(item => {
                     Weapon weapon;
                     return (weapon = item as Weapon) == null || !weapon.MissingVitalParts.Any<Slot>();
